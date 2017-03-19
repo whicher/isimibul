@@ -5,6 +5,21 @@
 <!-- <script src={{ "/static/js/jquery.easing.min.js" | prepend: site.baseurl }}></script> -->
 <script src={{ "/static/js/tether.min.js" | prepend: site.baseurl }}></script>
 <script src={{ "/static/js/bootstrap.min.js" | prepend: site.baseurl }}></script>
+
+<!-- Firebase stuff. -->
+<script src="https://www.gstatic.com/firebasejs/3.7.2/firebase.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyAQX2WT7n7ilbBkPtzBpUcMOAlYrS8gVaI",
+    authDomain: "isimibul-4ac81.firebaseapp.com",
+    databaseURL: "https://isimibul-4ac81.firebaseio.com",
+    storageBucket: "isimibul-4ac81.appspot.com",
+    messagingSenderId: "645033348669"
+  };
+  firebase.initializeApp(config);
+</script>
+
 <!-- Custom Theme JavaScript -->
 <script src={{ "/static/js/custom.js" | prepend: site.baseurl }}></script>
 
@@ -13,9 +28,9 @@
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
 
-  ga('create', '', 'auto');
+  ga('create', 'UA-49479116-1', 'auto');
   ga('send', 'pageview');
 
 </script>
