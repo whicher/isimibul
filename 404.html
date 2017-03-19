@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+</head>
+<body>
+<div class="container">
+  <div class="row">
+    <div class="error-template">
+      <h1>Tüh!</h1>
+      <h2>Bulamadık</h2>
+      <div class="error-details">
+        Beklenmedik bir hata oldu :-/<br>
+      </div>
+
+      <div class="error-actions">
+        <a href="<?php echo Yii::app()->request->baseUrl; ?>" class="btn btn-primary">
+          <i class="icon-home icon-white"></i>Ana Sayfa
+        </a>
+        <a href="mailto:info@isimibul.co" class="btn btn-default">
+          <i class="icon-envelope"></i>Bize ulaşın
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
