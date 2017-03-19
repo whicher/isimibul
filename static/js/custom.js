@@ -3,6 +3,24 @@ var _RAW_QUERY = '';
 $( document ).ready(function() {
     console.log( "ready!" );
 
+    firebase.auth().signInAnonymously().catch(function(error) {
+      // Handle Errors here.
+      var errorCode = error.code;
+      var errorMessage = error.message;
+      console.log('Error: ' + errorCode + ' msg: ' + errorMessage);
+    });
+
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        // User is signed in.
+        var isAnonymous = user.isAnonymous;
+        var uid = user.uid;
+        console.log('signInAnonymously: ' + JSON.stringify(user));
+      } else {
+        console.log('signed out');
+      }
+    });
+
     var currentUrl = window.location.href;
     if(currentUrl.indexOf('/details?job=') > 0) {
       console.log('DETAILS PAGE');
@@ -24,11 +42,15 @@ $( document ).ready(function() {
         updateUIDetails(job);
       });
 
+    } else if(currentUrl.indexOf('/search?q=') > 0) {
+      console.log('SEARCH BY GET');
+
     } else {
       console.log('HOMEPAGE');
       $('#div-search-results').hide();
 
-      $('#btn-search').click(function(args) {
+      $('#form-search').submit(function(e) {
+        e.preventDefault();
         console.log('Cleaning up previous search');
         $('#ul-search-results').children().remove();
         _RAW_QUERY = $('#input-query').val();
