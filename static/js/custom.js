@@ -15,11 +15,14 @@ $( document ).ready(function() {
         // User is signed in.
         var isAnonymous = user.isAnonymous;
         var uid = user.uid;
-        console.log('signInAnonymously: ' + JSON.stringify(user));
+        // console.log('signInAnonymously: ' + JSON.stringify(user));
+        console.log('signed in');
       } else {
         console.log('signed out');
       }
     });
+
+    $('#span-num-search-results').text('0');
 
     var currentUrl = window.location.href;
     if(currentUrl.indexOf('/details?job=') > 0) {
@@ -44,17 +47,18 @@ $( document ).ready(function() {
 
     } else if(currentUrl.indexOf('/search?q=') > 0) {
       console.log('SEARCH BY GET');
-
+      var params = getJsonFromUrl(currentUrl);
+      var query = params.q;
+      console.log('param: ' + query);
+      $('#input-query').val(query);
+      DoSearch();
     } else {
       console.log('HOMEPAGE');
       $('#div-search-results').hide();
 
       $('#form-search').submit(function(e) {
         e.preventDefault();
-        console.log('Cleaning up previous search');
-        $('#ul-search-results').children().remove();
-        _RAW_QUERY = $('#input-query').val();
-        GetJobKeys(_RAW_QUERY);
+        DoSearch();
       });
 
       $('#btn-login').click(function(args){
@@ -79,6 +83,39 @@ $( document ).ready(function() {
       });
     }
 });
+
+function DoSearch() {
+  console.log('Doing search...');
+  console.log('Cleaning up previous search');
+  $('#ul-search-results').children().remove();
+  _RAW_QUERY = $('#input-query').val();
+  GetJobKeys(_RAW_QUERY);
+  
+  // Log the query for analysis.
+  if (firebase.auth().currentUser != null) {
+    logQuery(firebase.auth().currentUser.uid, _RAW_QUERY);
+  }
+}
+
+function getTodayDate() {
+    var d = new Date();
+    var currentYear = d.getFullYear().toString();
+    var currentMonth = (
+        d.getMonth() + 1 >= 10 ? d.getMonth() + 1 : '0' + (d.getMonth() + 1));
+    var currentDay = d.getDate() >= 10 ? d.getDate() : '0' + (d.getDate());
+    console.log(currentYear + '-' + currentMonth + '-' + currentDay);
+    return currentYear + '-' + currentMonth + '-' + currentDay;
+}
+
+function logQuery(uid, query) {
+  var newLogKey = firebase.database().ref().child('logs').push({
+      'uid': uid,
+      'query': query,
+      'date': getTodayDate(),
+  }).key;
+  console.log('Pushed log key: ' + newLogKey);
+  //return firebase.database().ref().update(updates);
+}
 
 function getJsonFromUrl() {
   var query = location.search.substr(1);
@@ -121,7 +158,7 @@ function GetJobKeys(query) {
 }
 
 function GetJobs(jobKeys) {
-  console.log('GetJobs ' + jobKeys);
+  console.log('GetJobs ' + jobKeys.length);
   var jobs = [];
   for (var i = jobKeys.length - 1; i >= 0; i--) {
     var key = jobKeys[i];
@@ -142,6 +179,7 @@ function GetJobs(jobKeys) {
 function updateUI(jobs) {
   console.log('updateUI');
   $('#h3-search-query').text(_RAW_QUERY);
+  $('#span-num-search-results').text(jobs.length);
   for (var i = jobs.length - 1; i >= 0; i--) {
     $('#ul-search-results').append(
         '<li>' +
