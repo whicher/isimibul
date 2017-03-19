@@ -6,7 +6,29 @@ $( document ).ready(function() {
       var query = $('#input-query').val();
       searchJob(query);
     });
-    FBTrials();
+
+    $('#btn-login').click(function(args){
+      console.log('Logging in');
+      var email = $('#input-email').val();
+      var password = $('#input-password').val();
+      console.log('Creds: ' + email + ' ' + password);
+      // TODO(hakanu): Firebase login here.
+    });
+
+    $('#btn-signup').click(function(args){
+      console.log('Signing up');
+      var email = $('#input-signup-email').val();
+      var password = $('#input-signup-password').val();
+      var name = $('#input-signup-name').val();
+      var background = $('#input-signup-background').val();
+      var uni = $('#input-signup-uni').val();
+      var uniDept = $('#input-signup-uni-dept').val();
+      console.log('Creds: ' + email + ' ' + password + ' ' + background + '' + 
+                  name + ' ' + uni + ' ' + uniDept);
+      // TODO(hakanu): Firebase sign up here.
+    });
+
+    FBTrials('eleman');
 });
 
 function searchJob(query) {
@@ -14,9 +36,9 @@ function searchJob(query) {
   $('#div-search-results').show();
 }
 
-function FBTrials() {
+function FBTrials(query) {
   console.log('FBTrials');
-  var ref = firebase.database().ref('jobs_test/');
+  var ref = firebase.database().ref('jobs_index/' + query).orderByValue().limitToFirst(20);
   ref.once('value', function(snapshot) {
     snapshot.forEach(function(childSnapshot) {
       var childKey = childSnapshot.key;
@@ -25,8 +47,4 @@ function FBTrials() {
       console.log('childData: ' + JSON.stringify(childData));
     });
   });
-
-  // ref.orderByChild("height").equalTo(25).on("child_added", function(snapshot) {
-  //   console.log(snapshot.key());
-  // });
 }
