@@ -32,17 +32,17 @@ $( document ).ready(function() {
       var jobKey = params.job.substr(params.job.lastIndexOf('_') + 1);
       console.log('param: ' + jobKey);
 
-      var ref = firebase.database().ref('jobs').orderByChild('hash').equalTo(jobKey).limitToFirst(20);
+      var ref = firebase.database().ref('jobs_hash_keyed/' + jobKey);
       var job = {};
       ref.once('value', function(snapshot) {
-        snapshot.forEach(function(childSnapshot) {
-          var childKey = childSnapshot.key;
-          var childData = childSnapshot.val();
-          // console.log('childKey: ' + JSON.stringify(childKey));
-          // console.log('childData: ' + JSON.stringify(childData));
-          job = childData;
-        });
-        updateUIDetails(job);
+        // snapshot.forEach(function(childSnapshot) {
+        //   var childKey = childSnapshot.key;
+        //   var childData = childSnapshot.val();
+        //   // console.log('childKey: ' + JSON.stringify(childKey));
+        //   // console.log('childData: ' + JSON.stringify(childData));
+        //   job = childData;
+        // });
+        updateUIDetails(JSON.parse(JSON.stringify(snapshot)));
       });
 
     } else if(currentUrl.indexOf('/search?q=') > 0) {
@@ -162,15 +162,12 @@ function GetJobs(jobKeys) {
   var jobs = [];
   for (var i = jobKeys.length - 1; i >= 0; i--) {
     var key = jobKeys[i];
-    var ref = firebase.database().ref('jobs').orderByChild('link').equalTo(key).limitToFirst(20);
+    var ref = firebase.database().ref('jobs_hash_keyed/' + key);
     ref.once('value', function(snapshot) {
-      snapshot.forEach(function(childSnapshot) {
-        var childKey = childSnapshot.key;
-        var childData = childSnapshot.val();
-        // console.log('childKey: ' + JSON.stringify(childKey));
-        // console.log('childData: ' + JSON.stringify(childData));
-        jobs.push(childData);
-      });
+      // No need to do the foreach because it's already one single object.
+      // If you do this for each it iterates over the object keys. Unnecessary
+      // looping.
+      jobs.push(JSON.parse(JSON.stringify(snapshot)));
       updateUI(jobs);
     });
   }
@@ -181,12 +178,14 @@ function updateUI(jobs) {
   $('#h3-search-query').text(_RAW_QUERY);
   $('#span-num-search-results').text(jobs.length);
   for (var i = jobs.length - 1; i >= 0; i--) {
-    $('#ul-search-results').append(
-        '<li>' +
-        '<h4><a href="/details?job=' + jobs[i].slug + '_' + jobs[i].hash + '" target="_blank">' + jobs[i].title + '</a></h4>' + 
-        '<sub>' + jobs[i].city + ' | ' + jobs[i].company + ' | ' + jobs[i].category +
-        ' | ' + jobs[i].date + '</sub>' + 
-        '</li>');
+    if ($('#li-job-' + jobs[i].hash).length < 1) {
+      $('#ul-search-results').append(
+          '<li id="li-job-' + jobs[i].hash +'">' +
+          '<h4><a href="/details?job=' + jobs[i].slug + '_' + jobs[i].hash + '" target="_blank">' + jobs[i].title + '</a></h4>' + 
+          '<sub>' + jobs[i].city + ' | ' + jobs[i].company + ' | ' + jobs[i].category +
+          ' | ' + jobs[i].date + '</sub>' + 
+          '</li>');
+    }
   }
   $('#div-search-results').show();
 }
