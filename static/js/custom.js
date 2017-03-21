@@ -48,7 +48,7 @@ $( document ).ready(function() {
     } else if(currentUrl.indexOf('/search?q=') > 0) {
       console.log('SEARCH BY GET');
       var params = getJsonFromUrl(currentUrl);
-      var query = params.q;
+      var query = params.q.toLowerCase();
       console.log('param: ' + query);
       $('#input-query').val(query);
       DoSearch();
@@ -88,7 +88,7 @@ function DoSearch() {
   console.log('Doing search...');
   console.log('Cleaning up previous search');
   $('#ul-search-results').children().remove();
-  _RAW_QUERY = $('#input-query').val();
+  _RAW_QUERY = $('#input-query').val().toLowerCase();;
   GetJobKeys(_RAW_QUERY);
   
   // Log the query for analysis.
