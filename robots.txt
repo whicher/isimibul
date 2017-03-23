@@ -1,0 +1,5 @@
+Sitemap: http://isimibul.co/sitemap.xml
+
+User-agent: *
+Disallow: /admin
+Crawl-delay: 1
