@@ -2,13 +2,7 @@ var _RAW_QUERY = '';
 
 $( document ).ready(function() {
     console.log( "ready!" );
-
-    firebase.auth().signInAnonymously().catch(function(error) {
-      // Handle Errors here.
-      var errorCode = error.code;
-      var errorMessage = error.message;
-      console.log('Error: ' + errorCode + ' msg: ' + errorMessage);
-    });
+    var currentUrl = window.location.href;
 
     firebase.auth().onAuthStateChanged(function(user) {
       if (user) {
@@ -16,15 +10,35 @@ $( document ).ready(function() {
         var isAnonymous = user.isAnonymous;
         var uid = user.uid;
         // console.log('signInAnonymously: ' + JSON.stringify(user));
-        console.log('signed in');
+        console.log('signed in as ' + user.displayName);
+        updateUiWithLogin();
+        if (!isAnonymous) {
+          createProfileInfo();
+          // If not anonim and trying to go to login page, redirect to profile.
+          if(currentUrl.indexOf('/login') > 0) {
+            console.log('Already logged in, no need to go to login page');
+            window.location = '/profile';
+          }
+        }
       } else {
         console.log('signed out');
+        updateUiWithLogin();
+        if(currentUrl.indexOf('/profile') > 0) {
+          console.log('Logged out, cant go to profile page, redirect to login');
+          window.location = '/login';
+        }
       }
     });
 
     $('#span-num-search-results').text('0');
 
-    var currentUrl = window.location.href;
+    $('#btn-logout').click(function(args){
+      console.log('Logging out');
+      firebase.auth().signOut();
+      updateUiWithLogin();
+    });
+
+    // URL handling.
     if(currentUrl.indexOf('/details?job=') > 0) {
       console.log('DETAILS PAGE');
       $('#div-job-details').append('<h1>İş Detayları</h1>');
@@ -52,6 +66,16 @@ $( document ).ready(function() {
       console.log('param: ' + query);
       $('#input-query').val(query);
       DoSearch();
+    } else if(currentUrl.indexOf('/profile') > 0) {
+      console.log('PROFILE PAGE');
+      var user = firebase.auth().currentUser;
+      console.log('current user: ' + JSON.stringify(user));
+      if (user == null) {
+        //window.location = '/login';
+      } else {
+        // updateUiWithLogin();
+        // createProfileInfo();
+      }
     } else {
       console.log('HOMEPAGE');
       $('#div-search-results').hide();
@@ -81,6 +105,58 @@ $( document ).ready(function() {
                     name + ' ' + uni + ' ' + uniDept);
         // TODO(hakanu): Firebase sign up here.
       });
+
+      $('#btn-google-signin').click(function(args){
+        console.log('Signing in with Google');
+        var provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('https://www.googleapis.com/auth/plus.login');
+        firebase.auth().signInWithPopup(provider).then(function(result) {
+          // This gives you a Google Access Token. You can use it to access the Google API.
+          var token = result.credential.accessToken;
+          // The signed-in user info.
+          var user = result.user;
+          console.log('user: ' + JSON.stringify(user));
+          updateUiWithLogin();
+          //window.location = '/';
+          navigateToProfileIfLoggedIn();
+        }).catch(function(error) {
+          // Handle Errors here.
+          var errorCode = error.code;
+          var errorMessage = error.message;
+          // The email of the user's account used.
+          var email = error.email;
+          // The firebase.auth.AuthCredential type that was used.
+          var credential = error.credential;
+          console.log('Error: ' + JSON.stringify(error));
+        });
+      });
+
+      $('#btn-facebook-signin').click(function(args){
+        console.log('Signing in with facebook');
+        var provider = new firebase.auth.FacebookAuthProvider();
+        provider.setCustomParameters({
+          'display': 'popup'
+        });
+        firebase.auth().signInWithPopup(provider).then(function(result) {
+          // This gives you a Google Access Token. You can use it to access the Google API.
+          var token = result.credential.accessToken;
+          // The signed-in user info.
+          var user = result.user;
+          console.log('user: ' + JSON.stringify(user));
+          updateUiWithLogin();
+          //window.location = '/';
+          navigateToProfileIfLoggedIn();
+        }).catch(function(error) {
+          // Handle Errors here.
+          var errorCode = error.code;
+          var errorMessage = error.message;
+          // The email of the user's account used.
+          var email = error.email;
+          // The firebase.auth.AuthCredential type that was used.
+          var credential = error.credential;
+          console.log('Error: ' + JSON.stringify(error));
+        });
+      });
     }
 });
 
@@ -88,7 +164,22 @@ function DoSearch() {
   console.log('Doing search...');
   console.log('Cleaning up previous search');
   $('#ul-search-results').children().remove();
-  _RAW_QUERY = $('#input-query').val().toLowerCase();;
+  _RAW_QUERY = $('#input-query').val().toLowerCase();
+
+  // Check if user is logged in.
+  // If not, do an anonymous login otherwise no permission.
+  var user = firebase.auth().currentUser;
+  console.log('Querying as user: ' + user);
+  if (user == null) {
+    console.log('user is null so signing in anonymously');
+    firebase.auth().signInAnonymously().catch(function(error) {
+      // Handle Errors here.
+      var errorCode = error.code;
+      var errorMessage = error.message;
+      console.log('Error: ' + errorCode + ' msg: ' + errorMessage);
+    });
+  }
+
   GetJobKeys(_RAW_QUERY);
   
   // Log the query for analysis.
@@ -125,20 +216,6 @@ function getJsonFromUrl() {
     result[item[0]] = decodeURIComponent(item[1]);
   });
   return result;
-}
-
-function searchJob(rawQuery) {
-  console.log('Searching job for ' + rawQuery);
-  var queryWords = rawQuery.split(' ');
-
-  var results = [];
-  for (var i = queryWords.length - 1; i >= 0; i--) {
-    var query = queryWords[i];
-    SearchFb(query);
-    break;
-  }
-
-  $('#div-search-results').show();
 }
 
 function GetJobKeys(query) {
@@ -190,6 +267,60 @@ function updateUI(jobs) {
   $('#div-search-results').show();
 }
 
+function navigateToProfileIfLoggedIn() {
+  console.log('navigateToProfileIfLoggedIn');
+  var user = firebase.auth().currentUser;
+  if (user) {
+    console.log('Logged in so going to profile');
+    // window.location = '/profile';
+  } else {
+    console.log('Not logged in');
+  }
+}
+
+function updateUiWithLogin() {
+  console.log('updating UI');
+  var user = firebase.auth().currentUser;
+  if (user && !user.isAnonymous) {
+    console.log('Logged in');
+    $('#a-signin').text(user.displayName);
+    $('#a-signin').attr('href', '/profile');
+    $('#btn-logout').text('Oturumu kapat');
+  } else {
+    console.log('Not logged in');
+    $('#a-signin').text('Kaydol/Oturum Aç');
+    $('#a-signin').attr('href', '/login');
+    $('#btn-logout').text('');
+  }
+}
+
+
+// function updateUiAfterLogout() {
+//   $('#btn-logout').addClass('hidden');
+//   $('#btn-login').removeClass('hidden');
+//   $('#p-login-username').html('Not logged in');
+//   $('#ul-urls').html('');
+//   $('#p-message').text('Log in first');
+// }
+
+// /profile page.
+function createProfileInfo() {
+  console.log('createProfileInfo');
+  var user = firebase.auth().currentUser;
+  if (user) {
+    console.log('Logged in');
+    $('#div-profile').append(
+        '<h2>' + user.displayName + '</h2>' +
+        '<p><img src="' + user.photoURL + '"></p>' +
+        '<p>-</p>' +
+        '<br>'
+    );
+  } else {
+    console.log('Not logged in');
+    $('#a-signin').text('Kaydol/Oturum Aç');
+  }
+}
+
 function updateUIDetails(job) {
   console.log('updateUIDetails');
   $('#div-job-details').append('<h2>' + job.title + '</h2>');
@@ -200,5 +331,5 @@ function updateUIDetails(job) {
   $('#div-job-details').append('<li>Şirket: <a href="' + job.company_link + '" target="_blank">' + job.company + '</a></li>');
   $('#div-job-details').append('<li><img src="' + job.company_img +'"></li>');
   $('#div-job-details').append('</ul>');
-  $('#div-job-details').append('<p><a href="' + job.link + '" target="_blank">Hemen bu işe başvur</a></h2>');
+  $('#div-job-details').append('<p><a class="btn btn-lg btn-primary btn-block" href="' + job.link + '" target="_blank">Hemen bu işe başvur</a></h2>');
 }
