@@ -59,10 +59,18 @@ $( document ).ready(function() {
         updateUIDetails(JSON.parse(JSON.stringify(snapshot)));
       });
 
-    } else if(currentUrl.indexOf('/search?q=') > 0) {
+    } else if(
+        currentUrl.indexOf('/search?q=') > 0 ||
+        currentUrl.indexOf('/search?search_query=') > 0) {
       console.log('SEARCH BY GET');
       var params = getJsonFromUrl(currentUrl);
-      var query = params.q.toLowerCase();
+      var query = '';
+      if (params.hasOwnProperty('q')) {
+        query = params.q.toLowerCase();
+      } else {
+        query = params.search_query.toLowerCase();
+      }
+
       console.log('param: ' + query);
       $('#input-query').val(query);
       DoSearch();
@@ -164,7 +172,8 @@ function DoSearch() {
   console.log('Doing search...');
   console.log('Cleaning up previous search');
   $('#ul-search-results').children().remove();
-  _RAW_QUERY = $('#input-query').val().toLowerCase();
+  var originalQuery = $('#input-query').val();
+  _RAW_QUERY = originalQuery.toLowerCase();
 
   // Check if user is logged in.
   // If not, do an anonymous login otherwise no permission.
@@ -184,7 +193,9 @@ function DoSearch() {
   
   // Log the query for analysis.
   if (firebase.auth().currentUser != null) {
-    logQuery(firebase.auth().currentUser.uid, _RAW_QUERY);
+    logQuery(firebase.auth().currentUser.uid, _RAW_QUERY, originalQuery);
+  } else {
+    console.log('Can not log bc not logged in');
   }
 }
 
@@ -198,11 +209,14 @@ function getTodayDate() {
     return currentYear + '-' + currentMonth + '-' + currentDay;
 }
 
-function logQuery(uid, query) {
-  var newLogKey = firebase.database().ref().child('logs').push({
+function logQuery(uid, query, originalQuery) {
+  var d = getTodayDate();
+  var newLogKey = firebase.database().ref().child('logs/' + d).push({
       'uid': uid,
       'query': query,
+      'rawQuery': originalQuery,
       'date': getTodayDate(),
+      'medium': 'web',
   }).key;
   console.log('Pushed log key: ' + newLogKey);
   //return firebase.database().ref().update(updates);
