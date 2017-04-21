@@ -234,18 +234,32 @@ function getJsonFromUrl() {
 
 function GetJobKeys(query) {
   console.log('GetJobKeys ' + query);
-  var jobKeys = [];
-  var ref = firebase.database().ref('jobs_index/' + query).orderByValue().limitToFirst(20);
-  ref.once('value', function(snapshot) {
-    snapshot.forEach(function(childSnapshot) {
-      var childKey = childSnapshot.key;
-      var childData = childSnapshot.val();
-      // console.log('childKey: ' + JSON.stringify(childKey));
-      // console.log('childData: ' + JSON.stringify(childData));
-      jobKeys.push(childData);
+  var queryParts = query.split(' ');
+  var numFetchingDone = 0;
+  for (var i in queryParts) {
+    var queryPart = queryParts[i];
+    var jobKeys = [];
+    var jobKeysStats = {};
+    console.log('searching for ' + queryPart);
+    var ref = firebase.database().ref('jobs_index/' + queryPart).orderByValue().limitToFirst(50);
+    ref.once('value', function(snapshot) {
+      snapshot.forEach(function(childSnapshot) {
+        var childKey = childSnapshot.key;
+        var childData = childSnapshot.val();
+        // console.log('childKey: ' + JSON.stringify(childKey));
+        // console.log('childData: ' + JSON.stringify(childData));
+        jobKeys.push(childData);
+        if (jobKeysStats[childData] == null) {
+          jobKeysStats[childData] = 1;
+        } else {
+          jobKeysStats[childData]++;
+        }
+      });
+      numFetchingDone++;
+      console.log("jobKeysStats: " + JSON.stringify(jobKeysStats));
+      GetJobs(jobKeys);
     });
-    GetJobs(jobKeys);
-  });
+  }
 }
 
 function GetJobs(jobKeys) {
@@ -265,7 +279,7 @@ function GetJobs(jobKeys) {
 }
 
 function updateUI(jobs) {
-  console.log('updateUI');
+  //console.log('updateUI');
   $('#h3-search-query').text(_RAW_QUERY);
   $('#span-num-search-results').text(jobs.length);
   for (var i = jobs.length - 1; i >= 0; i--) {
