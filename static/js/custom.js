@@ -109,7 +109,7 @@ $( document ).ready(function() {
         var background = $('#input-signup-background').val();
         var uni = $('#input-signup-uni').val();
         var uniDept = $('#input-signup-uni-dept').val();
-        console.log('Creds: ' + email + ' ' + password + ' ' + background + '' + 
+        console.log('Creds: ' + email + ' ' + password + ' ' + background + '' +
                     name + ' ' + uni + ' ' + uniDept);
         // TODO(hakanu): Firebase sign up here.
       });
@@ -190,7 +190,7 @@ function DoSearch() {
   }
 
   GetJobKeys(_RAW_QUERY);
-  
+
   // Log the query for analysis.
   if (firebase.auth().currentUser != null) {
     logQuery(firebase.auth().currentUser.uid, _RAW_QUERY, originalQuery);
@@ -236,63 +236,66 @@ function GetJobKeys(query) {
   console.log('GetJobKeys ' + query);
   var queryParts = query.split(' ');
   var numFetchingDone = 0;
-  for (var i in queryParts) {
-    var queryPart = queryParts[i];
-    var jobKeys = [];
-    var jobKeysStats = {};
-    console.log('searching for ' + queryPart);
-    var ref = firebase.database().ref('jobs_index/' + queryPart).orderByValue().limitToFirst(50);
-    ref.once('value', function(snapshot) {
-      snapshot.forEach(function(childSnapshot) {
-        var childKey = childSnapshot.key;
-        var childData = childSnapshot.val();
-        // console.log('childKey: ' + JSON.stringify(childKey));
-        // console.log('childData: ' + JSON.stringify(childData));
-        jobKeys.push(childData);
-        if (jobKeysStats[childData] == null) {
-          jobKeysStats[childData] = 1;
-        } else {
-          jobKeysStats[childData]++;
+  // Get the initial results and then seek for other terms if they exist.
+  var queryPart = queryParts[0];
+  var jobKeys = [];
+  var jobKeysStats = {};
+  //console.log('searching for ' + queryPart);
+  var ref = firebase.database().ref('jobs_index/' + queryPart).orderByValue().limitToFirst(50);
+  ref.once('value', function(snapshot) {
+    snapshot.forEach(function(childSnapshot) {
+      var childKey = childSnapshot.key;
+      var childData = childSnapshot.val();
+      //console.log('Getting job details for ' + childData);
+      var refInner = firebase.database().ref('jobs_hash_keyed/' + childData);
+      refInner.once('value', function(snapshotInner) {
+        //console.log('fetched the job details: ' + JSON.stringify(snapshotInner));
+        var job = JSON.parse(JSON.stringify(snapshotInner));
+        var allTermsExist = true;
+        for (var i = 1; i < queryParts.length; i++) {
+          if (!checkIfTermExistsInJob(job, queryParts[i])) {
+            allTermsExist = false;
+          }
+        }
+        if (allTermsExist) {
+          appendJobsToUI([job]);
+          numFetchingDone++;
         }
       });
-      numFetchingDone++;
-      console.log("jobKeysStats: " + JSON.stringify(jobKeysStats));
-      GetJobs(jobKeys);
-    });
-  }
-}
 
-function GetJobs(jobKeys) {
-  console.log('GetJobs ' + jobKeys.length);
-  var jobs = [];
-  for (var i = jobKeys.length - 1; i >= 0; i--) {
-    var key = jobKeys[i];
-    var ref = firebase.database().ref('jobs_hash_keyed/' + key);
-    ref.once('value', function(snapshot) {
-      // No need to do the foreach because it's already one single object.
-      // If you do this for each it iterates over the object keys. Unnecessary
-      // looping.
-      jobs.push(JSON.parse(JSON.stringify(snapshot)));
-      updateUI(jobs);
+      $('#span-num-search-results').text(numFetchingDone);
     });
-  }
-}
-
-function updateUI(jobs) {
-  //console.log('updateUI');
+    //console.log("jobKeysStats: " + JSON.stringify(jobKeysStats));
+  });
   $('#h3-search-query').text(_RAW_QUERY);
-  $('#span-num-search-results').text(jobs.length);
-  for (var i = jobs.length - 1; i >= 0; i--) {
+  $('#div-search-results').show();
+}
+
+function checkIfTermExistsInJob(job, term) {
+  //console.log('Checking if term exists in job');
+  var text = (
+      job.description + ' ' + job.title + ' ' +
+      job.category + ' ' + job.company + ' ' + job.city).toLowerCase();
+  //console.log('text: ' + text + ' term: ' + term);
+  if (text.indexOf(term) > 0) {
+    //console.log('exists...');
+    return true;
+  }
+  return false;
+}
+
+function appendJobsToUI(jobs) {
+  console.log('updateUI');
+   for (var i = jobs.length - 1; i >= 0; i--) {
     if ($('#li-job-' + jobs[i].hash).length < 1) {
       $('#ul-search-results').append(
           '<li id="li-job-' + jobs[i].hash +'">' +
-          '<h4><a href="/details?job=' + jobs[i].slug + '_' + jobs[i].hash + '" target="_blank">' + jobs[i].title + '</a></h4>' + 
+          '<h4><a href="/details?job=' + jobs[i].slug + '_' + jobs[i].hash + '" target="_blank">' + jobs[i].title + '</a></h4>' +
           '<sub>' + jobs[i].city + ' | ' + jobs[i].company + ' | ' + jobs[i].category +
-          ' | ' + jobs[i].date + '</sub>' + 
+          ' | ' + jobs[i].date + '</sub>' +
           '</li>');
     }
   }
-  $('#div-search-results').show();
 }
 
 function navigateToProfileIfLoggedIn() {
