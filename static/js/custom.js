@@ -234,7 +234,7 @@ function getJsonFromUrl() {
 
 function GetJobKeys(query) {
   console.log('GetJobKeys ' + query);
-  var queryParts = query.split(' ');
+  var queryParts = query.trim().split(' ');
   var numFetchingDone = 0;
   // Get the initial results and then seek for other terms if they exist.
   var queryPart = queryParts[0];
@@ -260,10 +260,11 @@ function GetJobKeys(query) {
         if (allTermsExist) {
           appendJobsToUI([job]);
           numFetchingDone++;
+          $('#span-num-search-results').text(numFetchingDone);
+
         }
       });
 
-      $('#span-num-search-results').text(numFetchingDone);
     });
     //console.log("jobKeysStats: " + JSON.stringify(jobKeysStats));
   });
@@ -272,7 +273,7 @@ function GetJobKeys(query) {
 }
 
 function checkIfTermExistsInJob(job, term) {
-  //console.log('Checking if term exists in job');
+  //console.log('Checking if term exists in job ' + term);
   var text = (
       job.description + ' ' + job.title + ' ' +
       job.category + ' ' + job.company + ' ' + job.city).toLowerCase();
