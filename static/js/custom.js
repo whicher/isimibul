@@ -1,4 +1,5 @@
 var _RAW_QUERY = '';
+var _RESULTS_PER_PAGE = 10;
 
 $( document ).ready(function() {
     console.log( "ready!" );
@@ -66,10 +67,11 @@ $( document ).ready(function() {
       var params = getJsonFromUrl(currentUrl);
       var query = '';
       if (params.hasOwnProperty('q')) {
-        query = params.q.toLowerCase();
+        query = params.q;
       } else {
-        query = params.search_query.toLowerCase();
+        query = params.search_query;
       }
+      query = query.replace(/\+/g, ' ');
 
       console.log('param: ' + query);
       $('#input-query').val(query);
@@ -168,28 +170,91 @@ $( document ).ready(function() {
     }
 });
 
+// function GetParams() {
+//   var queryDict = {};
+//   location.search.substr(1).split("&").forEach(function(item) {queryDict[item.split("=")[0]] = item.split("=")[1]});
+//   return queryDict;
+// }
+
+function DoCSESearch(q, page) {
+  var url = 'https://www.googleapis.com/customsearch/v1?key=AIzaSyAgqt4NU_7WjZvjKrD4uQZy8M2-8pW5fTc&cx=015837852584757943655:7tzh1bko-w4&num=' + _RESULTS_PER_PAGE + '&q=' + q;
+  if (page > 0) {
+    url += '&start=' + _RESULTS_PER_PAGE * page
+  }
+  console.log('url: ' + url);
+  $.get(url, function(data) {
+    console.log(data);
+    $('#span-num-search-results').text(data.searchInformation.totalResults);
+    $('#span-search-time').text(data.searchInformation.searchTime);
+    document.getElementById("content").innerHTML = '';
+    for (var i = 0; i < data.items.length; i++) {
+      var item = data.items[i];
+      // in production code, item.htmlTitle should have the HTML entities escaped.
+      var thumbnail = '';
+      if (item.pagemap.cse_thumbnail) {
+          thumbnail = item.pagemap.cse_thumbnail[0].src;
+      }
+      document.getElementById("content").innerHTML += (
+          "<div>" +
+            "<p><img src=\"" + thumbnail + "\"></p>" +
+            "<p><b>" +
+              "<a href=" + item.link + " target=\"_blank\">" + item.htmlTitle + "</a>" +
+            "</b></p>" +
+            "<p>" + item.snippet + "</p>" +
+          "</div>"
+      );
+    }
+  });
+}
+
 function DoSearch() {
   console.log('Doing search...');
   console.log('Cleaning up previous search');
+  console.log(getJsonFromUrl());
+  var params = getJsonFromUrl();
+
   $('#ul-search-results').children().remove();
   var originalQuery = $('#input-query').val();
-  _RAW_QUERY = originalQuery.toLowerCase();
+  $('#current-page').innerHTML = '0';
+  
+  var currentPage = 0;
+  if ('p' in params) {
+    currentPage = parseInt(params.p);
+    $('#current-page').text(currentPage);
+    ;
+  }
+  console.log('Current page: ' + currentPage);
+  if (currentPage > 1) {
+    $('#btn-prev').attr('href', (
+        '/search?q=' + originalQuery + '&p=' + (currentPage - 1)));
+  }
+  $('#btn-next').attr('href', (
+      '/search?q=' + originalQuery + '&p=' + (currentPage + 1)));
 
-  // Check if user is logged in.
-  // If not, do an anonymous login otherwise no permission.
-  var user = firebase.auth().currentUser;
-  console.log('Querying as user: ' + user);
-  if (user == null) {
-    console.log('user is null so signing in anonymously');
-    firebase.auth().signInAnonymously().catch(function(error) {
-      // Handle Errors here.
-      var errorCode = error.code;
-      var errorMessage = error.message;
-      console.log('Error: ' + errorCode + ' msg: ' + errorMessage);
-    });
+  if ('q' in params) {
+    originalQuery = params.q;
+    $('#input-query').innerHTML = originalQuery;
   }
 
-  GetJobKeys(_RAW_QUERY);
+  DoCSESearch(originalQuery, currentPage);
+  $('#h3-search-query').innerHTML = originalQuery;
+
+  // _RAW_QUERY = originalQuery.toLowerCase();
+  // Check if user is logged in.
+  // If not, do an anonymous login otherwise no permission.
+  // var user = firebase.auth().currentUser;
+  // console.log('Querying as user: ' + user);
+  // if (user == null) {
+  //   console.log('user is null so signing in anonymously');
+  //   firebase.auth().signInAnonymously().catch(function(error) {
+  //     // Handle Errors here.
+  //     var errorCode = error.code;
+  //     var errorMessage = error.message;
+  //     console.log('Error: ' + errorCode + ' msg: ' + errorMessage);
+  //   });
+  // }
+
+  // GetJobKeys(_RAW_QUERY);
 
   // Log the query for analysis.
   if (firebase.auth().currentUser != null) {
